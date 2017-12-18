@@ -1,0 +1,77 @@
+float time : TIME;
+
+float4x4 matWorld              : WORLD;
+float4x4 matWorldInverse       : WORLDINVERSE;
+float4x4 matWorldView          : WORLDVIEW;
+float4x4 matWorldViewProject   : WORLDVIEWPROJECTION;
+float4x4 matView               : VIEW;
+float4x4 matViewInverse        : VIEWINVERSE;
+float4x4 matProject            : PROJECTION;
+float4x4 matProjectInverse     : PROJECTIONINVERSE;
+float4x4 matViewProject        : VIEWPROJECTION;
+float4x4 matViewProjectInverse : VIEWPROJECTIONINVERSE;
+
+float4 MaterialDiffuse  : DIFFUSE<string Object = "Geometry";>;
+
+float2 ViewportSize : VIEWPORTPIXELSIZE;
+
+
+static float2 ViewportOffset  = 0.5 / ViewportSize;
+static float2 ViewportOffset2 = 1.0 / ViewportSize;
+static float  ViewportAspect  = ViewportSize.x / ViewportSize.y;
+
+#define CASTER_ALPHA_ENABLE 1
+#define CASTER_ALPHA_MAP_ENABLE 1
+
+const float CasterAlphaThreshold = 0.5;
+uniform bool use_texture;
+
+#if CASTER_ALPHA_MAP_ENABLE
+texture DiffuseMap: MATERIALTEXTURE;
+sampler DiffuseMapSamp = sampler_state
+{
+	texture = <DiffuseMap>;
+	MINFILTER = POINT; MAGFILTER = POINT; MIPFILTER = POINT;
+	ADDRESSU = WRAP; ADDRESSV = WRAP;
+};
+#endif
+
+void DrawObjectVS(
+	in float4 Position : POSITION,
+	in float4 Texcoord : TEXCOORD0,
+	out float4 oTexcoord0 : TEXCOORD0,
+	out float4 oPosition : POSITION)
+{
+	oTexcoord0 = Texcoord;
+	oPosition = mul(Position, matWorldViewProject);
+}
+
+float4 DrawObjectPS(float2 coord : TEXCOORD0) : COLOR
+{
+#if CASTER_ALPHA_ENABLE
+	float alpha = MaterialDiffuse.a;
+#if CASTER_ALPHA_MAP_ENABLE
+	if (use_texture) alpha *= tex2D(DiffuseMapSamp, coord.xy).a;
+#endif
+	clip(alpha - CasterAlphaThreshold);
+#endif
+
+	return coord.xyxy * hatchingLoopNum.xyxy;
+}
+
+#define OBJECT_TEC(name, mmdpass)\
+	technique name<string MMDPass = mmdpass;\
+	>{\
+		pass DrawObject {\
+			AlphaTestEnable = FALSE; AlphaBlendEnable = FALSE;\
+			VertexShader = compile vs_3_0 DrawObjectVS();\
+			PixelShader = compile ps_3_0 DrawObjectPS();\
+		}\
+	}
+
+OBJECT_TEC(MainTec0, "object")
+OBJECT_TEC(MainTecBS0, "object_ss")
+
+technique EdgeTec<string MMDPass = "edge";>{}
+technique ZplotTec<string MMDPass = "zplot";>{}
+technique ShadowTech<string MMDPass = "shadow";>{}
