@@ -2,8 +2,6 @@ Hatching
 =========
 Hatching is an easy to use rendering plugin for MikuMikuDance, Add image effect of sketch-rendering
 
-Screenhots
-----------
 [![link text](./Shader/Screenshots/preview.jpg)](https://raw.githubusercontent.com/MikuMikuShaders/Hatching/master/Shader/Screenshots/preview.jpg)
 
 Requirements:
